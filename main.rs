@@ -68,7 +68,7 @@ mod tests {
         let access_token = env::var("GITHUB_ACCESS_TOKEN").unwrap_or_default();
         let base_url = "https://api.github.com";
         let endpoint = format!("/repos/{}/pulls/{}/merge", repository_url.trim_end_matches(".git").split('/').collect::<Vec<&str>>()[3..].join("/"), pr_number);
-        let mock_response = mock("GET", &format!("{}{}", base_url, endpoint))
+        let mock_response = mock("GET", &*format!("{}{}", base_url, endpoint))
             .match_header("Authorization", Matcher::Exact(format!("token {}", access_token)))
             .with_status(200)
             .with_header("content-type", "application/json")
