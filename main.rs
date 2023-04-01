@@ -1,6 +1,3 @@
-#[cfg(test)]
-mod tests;
-
 use std::io::{self, Write};
 use std::process::{Command, exit};
 
@@ -54,4 +51,39 @@ fn main() {
     }
 
     println!("Pull request fetched and checked out successfully!");
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_fetch_and_checkout() {
+        // Test with a valid repository URL and PR number
+        let output = run_command("cargo", &["run", "--", "https://github.com/owner/repo.git", "123"]);
+        assert!(output.status.success());
+        assert_eq!(String::from_utf8_lossy(&output.stdout), "Pull request fetched and checked out successfully!\n");
+
+        // Test with an invalid repository URL
+        let output = run_command("cargo", &["run", "--", "invalid_url", "123"]);
+        assert!(!output.status.success());
+        assert!(String::from_utf8_lossy(&output.stderr).contains("Failed to clone repository"));
+
+        // Test with an invalid PR number
+        let output = run_command("cargo", &["run", "--", "https://github.com/owner/repo.git", "invalid_number"]);
+        assert!(!output.status.success());
+        assert!(String::from_utf8_lossy(&output.stderr).contains("Failed to fetch pull request"));
+    }
+
+    fn run_command(program: &str, args: &[&str]) -> std::process::Output {
+        let mut command = std::process::Command::new(program);
+        command.args(args);
+
+        let output = command.output().unwrap();
+        if !output.status.success() {
+            panic!("Command failed: {:?}\n\n{}", command, String::from_utf8_lossy(&output.stderr));
+        }
+
+        output
+    }
 }
