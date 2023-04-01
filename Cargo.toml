@@ -7,6 +7,9 @@ edition = "2021"
 
 [dependencies]
 
+[dev-dependencies]
+mockito = "0.30.0"
+
 [[bin]]
 name = "pr-checkout"
 path = "main.rs"

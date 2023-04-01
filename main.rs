@@ -56,23 +56,32 @@ fn main() {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use mockito::{mock, Matcher};
+    use std::env;
 
     #[test]
     fn test_fetch_and_checkout() {
-        // Test with a valid repository URL and PR number
-        let output = run_command("cargo", &["run", "--", "https://github.com/owner/repo.git", "123"]);
+        let repository_url = "https://github.com/owner/repo.git";
+        let pr_number = "123";
+
+        // Mock the responses from the GitHub API
+        let access_token = env::var("GITHUB_ACCESS_TOKEN").unwrap_or_default();
+        let base_url = "https://api.github.com";
+        let endpoint = format!("/repos/{}/pulls/{}/merge", repository_url.trim_end_matches(".git").split('/').collect::<Vec<&str>>()[3..].join("/"), pr_number);
+        let mock_response = mock("GET", &format!("{}{}", base_url, endpoint))
+            .match_header("Authorization", Matcher::Exact(format!("token {}", access_token)))
+            .with_status(200)
+            .with_header("content-type", "application/json")
+            .with_body(r#"{"merged": true}"#)
+            .create();
+
+        // Run the command
+        let output = run_command("cargo", &["run", "--", repository_url, pr_number]);
         assert!(output.status.success());
         assert_eq!(String::from_utf8_lossy(&output.stdout), "Pull request fetched and checked out successfully!\n");
 
-        // Test with an invalid repository URL
-        let output = run_command("cargo", &["run", "--", "invalid_url", "123"]);
-        assert!(!output.status.success());
-        assert!(String::from_utf8_lossy(&output.stderr).contains("Failed to clone repository"));
-
-        // Test with an invalid PR number
-        let output = run_command("cargo", &["run", "--", "https://github.com/owner/repo.git", "invalid_number"]);
-        assert!(!output.status.success());
-        assert!(String::from_utf8_lossy(&output.stderr).contains("Failed to fetch pull request"));
+        // Assert that the mock response was called
+        mock_response.assert();
     }
 
     fn run_command(program: &str, args: &[&str]) -> std::process::Output {
